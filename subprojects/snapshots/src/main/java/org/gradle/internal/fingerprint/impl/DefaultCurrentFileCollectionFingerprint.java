@@ -81,11 +81,11 @@ public class DefaultCurrentFileCollectionFingerprint implements CurrentFileColle
     }
 
     @Override
-    public boolean visitChangesSince(FileCollectionFingerprint oldFingerprint, String title, boolean includeAdded, ChangeVisitor visitor) {
+    public boolean visitChangesSince(FileCollectionFingerprint oldFingerprint, String title, boolean shouldIncludeAdded, ChangeVisitor visitor) {
         if (hasSameRootHashes(oldFingerprint)) {
             return true;
         }
-        return compareStrategy.visitChangesSince(visitor, getFingerprints(), oldFingerprint.getFingerprints(), title, includeAdded);
+        return compareStrategy.visitChangesSince(visitor, getFingerprints(), oldFingerprint.getFingerprints(), title, shouldIncludeAdded);
     }
 
     private boolean hasSameRootHashes(FileCollectionFingerprint oldFingerprint) {

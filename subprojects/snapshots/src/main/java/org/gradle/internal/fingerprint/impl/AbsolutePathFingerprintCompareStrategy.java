@@ -39,7 +39,7 @@ public class AbsolutePathFingerprintCompareStrategy extends AbstractFingerprintC
     }
 
     @Override
-    protected boolean doVisitChangesSince(ChangeVisitor visitor, Map<String, FileSystemLocationFingerprint> current, Map<String, FileSystemLocationFingerprint> previous, String propertyTitle, boolean includeAdded) {
+    protected boolean doVisitChangesSince(ChangeVisitor visitor, Map<String, FileSystemLocationFingerprint> current, Map<String, FileSystemLocationFingerprint> previous, String propertyTitle, boolean shouldIncludeAdded) {
         Set<String> unaccountedForPreviousFingerprints = new LinkedHashSet<String>(previous.keySet());
 
         for (Map.Entry<String, FileSystemLocationFingerprint> currentEntry : current.entrySet()) {
@@ -56,7 +56,7 @@ public class AbsolutePathFingerprintCompareStrategy extends AbstractFingerprintC
                     }
                 }
                 // else, unchanged; check next file
-            } else if (includeAdded) {
+            } else if (shouldIncludeAdded) {
                 DefaultFileChange added = DefaultFileChange.added(currentAbsolutePath, propertyTitle, currentFingerprint.getType(), currentAbsolutePath);
                 if (!visitor.visitChange(added)) {
                     return false;

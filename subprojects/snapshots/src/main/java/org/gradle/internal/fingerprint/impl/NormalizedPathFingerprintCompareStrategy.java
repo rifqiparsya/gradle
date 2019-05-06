@@ -56,11 +56,11 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
      *         For those only in the previous fingerprint collection it checks if some entry with the same normalized path is in the current collection.
      *         If it is, file is reported as modified, if not as removed.
      *     </li>
-     *     <li>Finally, if {@code includeAdded} is {@code true}, the remaining fingerprints which are only in the current collection are reported as added.</li>
+     *     <li>Finally, if {@code shouldIncludeAdded} is {@code true}, the remaining fingerprints which are only in the current collection are reported as added.</li>
      * </ul>
      */
     @Override
-    protected boolean doVisitChangesSince(ChangeVisitor visitor, Map<String, FileSystemLocationFingerprint> currentFingerprints, Map<String, FileSystemLocationFingerprint> previousFingerprints, String propertyTitle, boolean includeAdded) {
+    protected boolean doVisitChangesSince(ChangeVisitor visitor, Map<String, FileSystemLocationFingerprint> currentFingerprints, Map<String, FileSystemLocationFingerprint> previousFingerprints, String propertyTitle, boolean shouldIncludeAdded) {
         ListMultimap<FileSystemLocationFingerprint, FilePathWithType> unaccountedForPreviousFiles = MultimapBuilder.hashKeys(previousFingerprints.size()).linkedListValues().build();
         ListMultimap<String, FilePathWithType> addedFilesByNormalizedPath = MultimapBuilder.linkedHashKeys().linkedListValues().build();
         for (Map.Entry<String, FileSystemLocationFingerprint> entry : previousFingerprints.entrySet()) {
@@ -101,7 +101,7 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
             }
         }
 
-        if (includeAdded) {
+        if (shouldIncludeAdded) {
             for (Map.Entry<String, FilePathWithType> entry : addedFilesByNormalizedPath.entries()) {
                 FilePathWithType addedFile = entry.getValue();
                 DefaultFileChange added = DefaultFileChange.added(addedFile.getAbsolutePath(), propertyTitle, addedFile.getFileType(), entry.getKey());

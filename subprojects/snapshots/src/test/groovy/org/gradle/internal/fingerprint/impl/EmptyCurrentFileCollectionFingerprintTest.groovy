@@ -32,7 +32,7 @@ class EmptyCurrentFileCollectionFingerprintTest extends Specification {
 
     def empty = new EmptyCurrentFileCollectionFingerprint("test")
 
-    def "comparing regular snapshot to empty snapshot shows entries removed (include added: #includeAdded)"() {
+    def "comparing regular snapshot to empty snapshot shows entries removed (include added: #shouldIncludeAdded)"() {
         def fingerprint = Mock(FileCollectionFingerprint) {
             getFingerprints() >> [
                 "file1.txt": new DefaultFileSystemLocationFingerprint("file1.txt", FileType.RegularFile, HashCode.fromInt(123)),
@@ -41,26 +41,26 @@ class EmptyCurrentFileCollectionFingerprintTest extends Specification {
             getRootHashes() >> ImmutableMultimap.of('/dir', HashCode.fromInt(456))
         }
         expect:
-        getChanges(fingerprint, empty, includeAdded).toList() == [
+        getChanges(fingerprint, empty, shouldIncludeAdded).toList() == [
             DefaultFileChange.removed("file1.txt", "test", FileType.RegularFile, "file1.txt"),
             DefaultFileChange.removed("file2.txt", "test", FileType.RegularFile, "file2.txt")
         ]
 
         where:
-        includeAdded << [true, false]
+        shouldIncludeAdded << [true, false]
     }
 
-    def "comparing empty fingerprints produces empty (include added: #includeAdded)"() {
+    def "comparing empty fingerprints produces empty (include added: #shouldIncludeAdded)"() {
         expect:
-        getChanges(empty, empty, includeAdded).empty
+        getChanges(empty, empty, shouldIncludeAdded).empty
 
         where:
-        includeAdded << [true, false]
+        shouldIncludeAdded << [true, false]
     }
 
-    private static Collection<Change> getChanges(FileCollectionFingerprint previous, CurrentFileCollectionFingerprint current, boolean includeAdded) {
+    private static Collection<Change> getChanges(FileCollectionFingerprint previous, CurrentFileCollectionFingerprint current, boolean shouldIncludeAdded) {
         def visitor = new CollectingChangeVisitor()
-        current.visitChangesSince(previous, "test", includeAdded, visitor)
+        current.visitChangesSince(previous, "test", shouldIncludeAdded, visitor)
         visitor.changes
     }
 }

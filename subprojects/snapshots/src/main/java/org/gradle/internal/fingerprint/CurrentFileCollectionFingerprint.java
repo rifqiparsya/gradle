@@ -39,6 +39,6 @@ public interface CurrentFileCollectionFingerprint extends FileCollectionFingerpr
      *
      * @return Whether the {@link ChangeVisitor} is looking for further changes. See {@link ChangeVisitor#visitChange(Change)}.
      */
-    boolean visitChangesSince(FileCollectionFingerprint oldFingerprint, String title, boolean includeAdded, ChangeVisitor visitor);
+    boolean visitChangesSince(FileCollectionFingerprint oldFingerprint, String title, boolean shouldIncludeAdded, ChangeVisitor visitor);
 
 }

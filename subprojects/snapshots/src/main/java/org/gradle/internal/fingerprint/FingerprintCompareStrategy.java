@@ -31,7 +31,7 @@ public interface FingerprintCompareStrategy {
     /**
      * @see FileCollectionFingerprint#visitChangesSince(FileCollectionFingerprint, String, boolean, ChangeVisitor)
      */
-    boolean visitChangesSince(ChangeVisitor visitor, Map<String, FileSystemLocationFingerprint> current, Map<String, FileSystemLocationFingerprint> previous, String propertyTitle, boolean includeAdded);
+    boolean visitChangesSince(ChangeVisitor visitor, Map<String, FileSystemLocationFingerprint> current, Map<String, FileSystemLocationFingerprint> previous, String propertyTitle, boolean shouldIncludeAdded);
 
     void appendToHasher(Hasher hasher, Collection<FileSystemLocationFingerprint> fingerprints);
 }

@@ -17,9 +17,13 @@
 package org.gradle.api.tasks
 
 import org.gradle.integtests.fixtures.AbstractIntegrationSpec
+import org.intellij.lang.annotations.Language
+import spock.lang.Issue
 import spock.lang.Unroll
 
-class FailingIncrementalTasksIntegrationTest extends AbstractIntegrationSpec {
+import static java.lang.Math.random
+
+class IncrementalTasksIntegrationTest extends AbstractIntegrationSpec {
 
     def "consecutively failing task has correct up-to-date status and failure"() {
         buildFile << """
@@ -108,4 +112,113 @@ class FailingIncrementalTasksIntegrationTest extends AbstractIntegrationSpec {
         "remove"      | false       | "with removed outputs is fully rebuilt"
         "none"        | true        | "with unmodified outputs is executed as incremental"
     }
+
+    @Issue("https://github.com/gradle/gradle/issues/9320")
+    def "incremental task with NAME_ONLY input (matching file names and content) detects changed input"() {
+        def taskName = "incrementalTask"
+        def inputs = folderNames().collect { file("${it}/input.txt").createFile() }
+        def modifiedInput = inputs[chosen]
+
+        @Language("Groovy") script = """
+            class IncrementalTask extends DefaultTask {
+                @InputFiles
+                @PathSensitive(PathSensitivity.NAME_ONLY)
+                FileCollection inputFiles = project.files(${inputs.collect { "'${it}'" }.join(", ")})
+            
+                @TaskAction
+                def action(IncrementalTaskInputs inputs) {}
+            }
+            
+            task ${taskName}(type: IncrementalTask) {}
+        """
+        buildScript script
+        run taskName, "--info"
+
+        when:
+        modifiedInput.text = "changed"
+        println "Modified ${modifiedInput} to '${modifiedInput.text}'!"
+
+        run taskName, "--info"
+        then:
+        outputContains "${modifiedInput} has changed."
+
+        when:
+        modifiedInput.text = ""
+        println "Modified ${modifiedInput} to '${modifiedInput.text}'!"
+        run taskName, "--info"
+        then:
+        outputContains "${modifiedInput} has changed."
+
+        where:
+        chosen << folderNames().indices
+    }
+
+    @Issue("https://github.com/gradle/gradle/issues/9320")
+    def "incremental task with NAME_ONLY input (matching file names and content) detects moved files"() {
+        def taskName = "incrementalTask"
+        def inputs = folderNames().collect { file("${it}/input.txt").createFile() }
+        def movableInput = inputs[chosen]
+        def renamedInput = file("moved/${movableInput.name}")
+
+        @Language("Groovy") script = """
+            class IncrementalTask extends DefaultTask {
+                @InputFiles
+                @PathSensitive(PathSensitivity.NAME_ONLY)
+                FileCollection inputFiles = project.files(${inputs.collect { "'${it}'" }.join(", ")}, '${renamedInput}')
+            
+                @TaskAction
+                def action(IncrementalTaskInputs inputs) {}
+            }
+            
+            task ${taskName}(type: IncrementalTask) {}
+        """
+        buildScript script
+        run taskName, "--info"
+
+        when:
+        println "Moving ${movableInput.absolutePath} to '${renamedInput.absolutePath}'!"
+        renamedInput.text = movableInput.text
+        movableInput.delete()
+
+        run taskName, "--info"
+        then:
+        !movableInput.exists()
+        renamedInput.exists()
+        outputContains "is up-to-date"
+
+        where:
+        chosen << folderNames().indices
+    }
+
+    @Issue("https://github.com/gradle/gradle/issues/9320")
+    def "incremental task with NAME_ONLY inputs (matching file names and content) detects deleted file"() {
+        def taskName = "incrementalTask"
+        def inputs = folderNames().collect { file("${it}/input.txt").createFile() }
+
+        @Language("Groovy") script = """
+            class IncrementalTask extends DefaultTask {
+                @InputFiles
+                @PathSensitive(PathSensitivity.NAME_ONLY)
+                FileCollection inputFiles = project.files(${inputs.collect { "'${it}'" }.join(", ")})
+            
+                @TaskAction
+                def action(IncrementalTaskInputs inputs) {}
+            }
+            
+            task ${taskName}(type: IncrementalTask) {}
+        """
+        buildScript script
+        run taskName
+
+        when:
+        inputs[1..2]*.delete()
+        println "${inputs} exists: ${inputs*.exists()}"
+        run taskName, "--info"
+        then:
+        outputDoesNotContain "${inputs[0]} has been removed."
+        outputContains "${inputs[1]} has been removed."
+        outputContains "${inputs[2]} has been removed."
+    }
+
+    private static Range<String> folderNames() { 'a'..'c' }
 }

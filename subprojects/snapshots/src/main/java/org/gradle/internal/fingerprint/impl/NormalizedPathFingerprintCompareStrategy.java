@@ -44,8 +44,7 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
         }
     };
 
-    private NormalizedPathFingerprintCompareStrategy() {
-    }
+    private NormalizedPathFingerprintCompareStrategy() {}
 
     /**
      * Determines changes by:
@@ -61,28 +60,28 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
      */
     @Override
     protected boolean doVisitChangesSince(ChangeVisitor visitor, Map<String, FileSystemLocationFingerprint> currentFingerprints, Map<String, FileSystemLocationFingerprint> previousFingerprints, String propertyTitle, boolean shouldIncludeAdded) {
-        ListMultimap<FileSystemLocationFingerprint, FilePathWithType> unaccountedForPreviousFiles = MultimapBuilder.hashKeys(previousFingerprints.size()).linkedListValues().build();
+        ListMultimap<FileSystemLocationFingerprint, FilePathWithType> missingPreviousFiles = MultimapBuilder.hashKeys(previousFingerprints.size()).linkedListValues().build();
         ListMultimap<String, FilePathWithType> addedFilesByNormalizedPath = MultimapBuilder.linkedHashKeys().linkedListValues().build();
         for (Map.Entry<String, FileSystemLocationFingerprint> entry : previousFingerprints.entrySet()) {
             String absolutePath = entry.getKey();
             FileSystemLocationFingerprint previousFingerprint = entry.getValue();
-            unaccountedForPreviousFiles.put(previousFingerprint, new FilePathWithType(absolutePath, previousFingerprint.getType()));
+            missingPreviousFiles.put(previousFingerprint, new FilePathWithType(absolutePath, previousFingerprint.getType()));
         }
 
         for (Map.Entry<String, FileSystemLocationFingerprint> entry : currentFingerprints.entrySet()) {
             String currentAbsolutePath = entry.getKey();
             FileSystemLocationFingerprint currentFingerprint = entry.getValue();
-            List<FilePathWithType> previousFilesForFingerprint = unaccountedForPreviousFiles.get(currentFingerprint);
+            List<FilePathWithType> previousFilesForFingerprint = missingPreviousFiles.get(currentFingerprint);
             if (previousFilesForFingerprint.isEmpty()) {
                 addedFilesByNormalizedPath.put(currentFingerprint.getNormalizedPath(), new FilePathWithType(currentAbsolutePath, currentFingerprint.getType()));
             } else {
                 previousFilesForFingerprint.remove(0);
             }
         }
-        List<Map.Entry<FileSystemLocationFingerprint, FilePathWithType>> unaccountedForPreviousEntries = Lists.newArrayList(unaccountedForPreviousFiles.entries());
-        Collections.sort(unaccountedForPreviousEntries, ENTRY_COMPARATOR);
-        for (Map.Entry<FileSystemLocationFingerprint, FilePathWithType> unaccountedForPreviousFingerprintEntry : unaccountedForPreviousEntries) {
-            FileSystemLocationFingerprint previousFingerprint = unaccountedForPreviousFingerprintEntry.getKey();
+        List<Map.Entry<FileSystemLocationFingerprint, FilePathWithType>> missingPreviousEntries = Lists.newArrayList(missingPreviousFiles.entries());
+        Collections.sort(missingPreviousEntries, ENTRY_COMPARATOR);
+        for (Map.Entry<FileSystemLocationFingerprint, FilePathWithType> missingPreviousFingerprintEntry : missingPreviousEntries) {
+            FileSystemLocationFingerprint previousFingerprint = missingPreviousFingerprintEntry.getKey();
             String normalizedPath = previousFingerprint.getNormalizedPath();
             List<FilePathWithType> addedFilesForNormalizedPath = addedFilesByNormalizedPath.get(normalizedPath);
             if (!addedFilesForNormalizedPath.isEmpty()) {
@@ -93,7 +92,7 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
                     return false;
                 }
             } else {
-                FilePathWithType removedFile = unaccountedForPreviousFingerprintEntry.getValue();
+                FilePathWithType removedFile = missingPreviousFingerprintEntry.getValue();
                 DefaultFileChange removed = DefaultFileChange.removed(removedFile.getAbsolutePath(), propertyTitle, removedFile.getFileType(), normalizedPath);
                 if (!visitor.visitChange(removed)) {
                     return false;

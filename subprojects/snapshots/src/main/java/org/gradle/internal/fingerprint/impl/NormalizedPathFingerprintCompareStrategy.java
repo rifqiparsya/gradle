@@ -28,6 +28,7 @@ import org.gradle.internal.hash.Hasher;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -80,7 +81,9 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
         }
 
         if (shouldIncludeAdded) {
-            for (Entry<String, FilePathWithType> entry : addedFilesByNormalizedPath.entries()) {
+            Iterator<Entry<String, FilePathWithType>> iterator = addedFilesByNormalizedPath.entries().stream().sorted(Entry.comparingByKey()).iterator();
+            while (iterator.hasNext()) {
+                Entry<String, FilePathWithType> entry = iterator.next();
                 if (wasAddedAndMessageCountSaturated(visitor, propertyTitle, entry)) {
                     return false; // TODO
                 }
@@ -89,10 +92,13 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
         return true;
     }
 
-    // There might be multiple files with the same normalized path, here we choose one of them
+    // There might be multiple files with the same normalized path, here we choose one of them (favoring absolute path matches)
     private static boolean wasModified(ListMultimap<String, FilePathWithType> addedFilesByNormalizedPath, String normalizedPath, FilePathWithType pathWithType) {
-        List<FilePathWithType> addedFilesForNormalizedPath = addedFilesByNormalizedPath.get(normalizedPath);
-        return !addedFilesForNormalizedPath.isEmpty() && addedFilesForNormalizedPath.remove(0) != null;
+        return addedFilesByNormalizedPath.get(normalizedPath)
+            .removeIf(file ->
+                file.getFileType() != FileType.Missing
+                    && pathWithType.getAbsolutePath().equals(file.getAbsolutePath())
+            );
     }
 
     private static ListMultimap<FileSystemLocationFingerprint, FilePathWithType> getMissingPreviousFingerprints(
@@ -104,6 +110,11 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
             .linkedListValues()
             .build();
         for (Entry<String, FileSystemLocationFingerprint> entry : previousFingerprints.entrySet()) {
+            // skip exact matches
+            if (currentFingerprints.entrySet().contains(entry)) {
+                continue;
+            }
+
             String absolutePath = entry.getKey();
             FileSystemLocationFingerprint previousFingerprint = entry.getValue();
             FileType previousFingerprintType = previousFingerprint.getType();
@@ -120,9 +131,14 @@ public class NormalizedPathFingerprintCompareStrategy extends AbstractFingerprin
     ) {
         ListMultimap<String, FilePathWithType> results = MultimapBuilder
             .linkedHashKeys()
-            .linkedListValues()
+            .arrayListValues()
             .build();
         for (Entry<String, FileSystemLocationFingerprint> entry : currentFingerprints.entrySet()) {
+            // skip exact matches
+            if (previousFingerprints.entrySet().contains(entry)) {
+                continue;
+            }
+
             String absolutePath = entry.getKey();
             FileSystemLocationFingerprint currentFingerprint = entry.getValue();
             List<FilePathWithType> previousFilesForFingerprint = missingPreviousFiles.get(currentFingerprint);
